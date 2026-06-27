@@ -1,0 +1,74 @@
+name: Sync upstream & Deploy to HuggingFace
+
+on:
+  schedule:
+    # 每天北京时间 6:00 自动同步（UTC 22:00）
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+    # 支持手动触发
+
+jobs:
+  sync-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout your repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch upstream latest code
+        run: |
+          git remote add upstream https://github.com/jiji262/douyin-downloader.git || true
+          git fetch upstream main
+          
+          # 检查是否有新提交
+          UPSTREAM_SHA=$(git rev-parse upstream/main)
+          LOCAL_SHA=$(git rev-parse HEAD)
+          
+          echo "Upstream SHA: $UPSTREAM_SHA"
+          echo "Local SHA:    $LOCAL_SHA"
+          
+          if [ "$UPSTREAM_SHA" = "$LOCAL_SHA" ]; then
+            echo "NO_CHANGE=true" >> $GITHUB_ENV
+            echo "✅ Already up to date, skip deploy."
+          else
+            echo "NO_CHANGE=false" >> $GITHUB_ENV
+            echo "🔄 New changes detected, merging..."
+          fi
+
+      - name: Merge upstream changes
+        if: env.NO_CHANGE == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git merge upstream/main --no-edit --allow-unrelated-histories
+
+      - name: Overlay HF-specific files
+        if: env.NO_CHANGE == 'false'
+        run: |
+          # 用我们自定义的文件覆盖上游的同名文件
+          cp hf/Dockerfile Dockerfile
+          cp hf/entrypoint.sh entrypoint.sh
+          cp hf/README.md README.md
+          chmod +x entrypoint.sh
+
+      - name: Push merged code back to GitHub
+        if: env.NO_CHANGE == 'false'
+        run: |
+          git add -A
+          git diff --cached --quiet || git commit -m "chore: sync upstream $(date '+%Y-%m-%d')"
+          git push origin main
+
+      - name: Deploy to HuggingFace Space
+        if: env.NO_CHANGE == 'false'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+          HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
+        run: |
+          # 推送到 HF Space 仓库，HF 检测到新 commit 会自动 rebuild
+          git remote add huggingface https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME || true
+          git push huggingface main --force
+          echo "🚀 Pushed to HuggingFace Space, rebuild triggered."
