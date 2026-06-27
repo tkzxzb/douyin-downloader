@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-CONFIG_FILE="/app/config.yml"
+# 写到 /tmp 避免权限问题（/app 是 root 权限）
+CONFIG_FILE="/tmp/config.yml"
 
-# 从环境变量（HF Secrets）生成 config.yml
 cat > "$CONFIG_FILE" <<EOF
 link: []
 
@@ -43,7 +43,7 @@ server:
   job_ttl_seconds: 86400
 EOF
 
-echo "✅ config.yml generated"
+echo "✅ config.yml generated at $CONFIG_FILE"
 echo "🚀 Starting Douyin Downloader REST API on port 7860..."
 
 exec python run.py --serve --serve-host 0.0.0.0 --serve-port 7860 -c "$CONFIG_FILE"
