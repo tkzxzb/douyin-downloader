@@ -21,14 +21,16 @@ RUN pip install --no-cache-dir fastapi uvicorn
 # 复制项目代码
 COPY . .
 
-# 创建启动脚本（运行时生成 config.yml，注入 Secrets）
+# 复制启动脚本，赋予执行权限（在 root 阶段操作）
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# 让 user 可以写 /app（可选，防止其他运行时写文件报错）
+RUN chown -R user:user /app
 
 # 切换到非 root 用户
 USER user
 
-# HF Space 默认端口 7860
 EXPOSE 7860
 
 ENTRYPOINT ["/entrypoint.sh"]
