@@ -1,4 +1,4 @@
-name: Sync upstream & Build & Deploy to HuggingFace
+name: Sync upstream & Build Image
 
 on:
   schedule:
@@ -11,7 +11,7 @@ env:
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/douyin-downloader
 
 jobs:
-  sync-and-deploy:
+  sync-and-build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -64,8 +64,6 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: sync upstream $(date '+%Y-%m-%d')"
           git push origin main
 
-      # ---- 构建 Docker 镜像并推送到 ghcr.io ----
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -81,41 +79,3 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.run_number }}
-
-      # ---- 触发 HuggingFace Space 重新部署 ----
-
-      - name: Push minimal Dockerfile to HuggingFace Space
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_USERNAME: ${{ secrets.HF_USERNAME }}
-          HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
-        run: |
-          # 创建一个只含单行 FROM 的临时目录
-          mkdir hf_space
-          cd hf_space
-
-          cat > Dockerfile <<EOF
-          FROM ${IMAGE_NAME}:latest
-          EOF
-
-          cat > README.md <<EOF
-          ---
-          title: Douyin Downloader
-          emoji: 🎬
-          colorFrom: red
-          colorTo: pink
-          sdk: docker
-          app_port: 7860
-          pinned: false
-          ---
-          EOF
-
-          git init
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "deploy: update to latest image $(date '+%Y-%m-%d %H:%M')"
-          git remote add huggingface https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME
-          git push huggingface main --force
-          echo "🚀 HuggingFace Space deploy triggered."
