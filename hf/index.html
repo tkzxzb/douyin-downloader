@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>抖音下载器</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f11;
+    --surface: #1a1a1f;
+    --surface2: #222228;
+    --border: #2e2e38;
+    --accent: #fe2c55;
+    --accent-dim: rgba(254,44,85,0.15);
+    --text: #f0f0f2;
+    --text-secondary: #8a8a9a;
+    --success: #25c16f;
+    --warning: #f0a500;
+    --error: #ff4757;
+    --radius: 10px;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  nav {
+    display: flex;
+    gap: 4px;
+  }
+  .nav-btn {
+    padding: 7px 16px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .nav-btn:hover { background: var(--surface2); color: var(--text); }
+  .nav-btn.active { background: var(--accent-dim); color: var(--accent); }
+
+  /* ── Main ── */
+  main {
+    flex: 1;
+    max-width: 780px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 36px 24px;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Download Page ── */
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .input-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .input-row {
+    display: flex;
+    gap: 10px;
+  }
+  input[type="text"] {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"]::placeholder { color: var(--text-secondary); }
+
+  .btn {
+    padding: 12px 22px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #e0263f; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--border); }
+
+  /* ── Jobs ── */
+  .section-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .jobs-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .job-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: border-color .15s;
+  }
+  .job-card:hover { border-color: #3e3e4a; }
+
+  .job-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-pending { background: var(--warning); box-shadow: 0 0 6px var(--warning); }
+  .dot-running {
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    animation: pulse 1.2s infinite;
+  }
+  .dot-done { background: var(--success); }
+  .dot-failed { background: var(--error); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .4; }
+  }
+
+  .job-info { flex: 1; min-width: 0; }
+  .job-url {
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+  }
+  .job-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .job-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+  .badge-pending { background: rgba(240,165,0,.15); color: var(--warning); }
+  .badge-running { background: var(--accent-dim); color: var(--accent); }
+  .badge-done { background: rgba(37,193,111,.15); color: var(--success); }
+  .badge-failed { background: rgba(255,71,87,.15); color: var(--error); }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  /* ── Settings Page ── */
+  .settings-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .settings-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .settings-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .field-group { display: flex; flex-direction: column; gap: 12px; }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-family: 'SF Mono', monospace;
+  }
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 14px;
+  }
+  .status-bar.ok { background: rgba(37,193,111,.12); color: var(--success); }
+  .status-bar.err { background: rgba(255,71,87,.12); color: var(--error); }
+  .status-bar.info { background: rgba(254,44,85,.1); color: var(--text-secondary); }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all .25s;
+    z-index: 999;
+    max-width: 320px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { border-color: var(--success); color: var(--success); }
+  #toast.error { border-color: var(--error); color: var(--error); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🎬</div>
+    抖音下载器
+  </div>
+  <nav>
+    <button class="nav-btn active" onclick="showPage('download', this)">下载</button>
+    <button class="nav-btn" onclick="showPage('settings', this)">设置</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ── Download Page ── -->
+  <div class="page active" id="page-download">
+    <div class="input-card">
+      <div class="input-label">粘贴链接开始下载</div>
+      <div class="input-row">
+        <input type="text" id="url-input" placeholder="https://www.douyin.com/video/... 或短链接 v.douyin.com/..." />
+        <button class="btn btn-primary" id="submit-btn" onclick="submitDownload()">下载</button>
+      </div>
+    </div>
+
+    <div class="section-title">
+      任务列表
+      <button class="btn btn-secondary" style="padding:5px 12px;font-size:12px;" onclick="loadJobs()">刷新</button>
+    </div>
+    <div class="jobs-list" id="jobs-list">
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-text">还没有下载任务</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Settings Page ── -->
+  <div class="page" id="page-settings">
+    <div class="settings-section">
+      <div class="settings-title">抖音 Cookie</div>
+      <div class="settings-desc">
+        在浏览器中登录抖音后，打开开发者工具 (F12) → Application → Cookies → www.douyin.com，复制对应的值填入下方。Cookie 保存后会持久化存储，重启不丢失。
+      </div>
+      <div class="field-group">
+        <div class="field">
+          <label>ttwid</label>
+          <input type="text" id="c-ttwid" placeholder="1%7C..." />
+        </div>
+        <div class="field">
+          <label>msToken</label>
+          <input type="text" id="c-msToken" placeholder="msToken 值..." />
+        </div>
+        <div class="field">
+          <label>odin_tt</label>
+          <input type="text" id="c-odin_tt" placeholder="odin_tt 值..." />
+        </div>
+        <div class="field">
+          <label>passport_csrf_token</label>
+          <input type="text" id="c-csrf" placeholder="passport_csrf_token 值..." />
+        </div>
+        <div class="field">
+          <label>sid_guard</label>
+          <input type="text" id="c-sid_guard" placeholder="sid_guard 值（可选）" />
+        </div>
+      </div>
+      <div id="cookie-status" class="status-bar info">
+        ℹ 填写 Cookie 后点击保存
+      </div>
+      <div style="margin-top:14px;">
+        <button class="btn btn-primary" onclick="saveCookies()">保存 Cookie</button>
+        <button class="btn btn-secondary" style="margin-left:8px;" onclick="loadCookies()">读取当前</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title">服务状态</div>
+      <div id="health-status" class="status-bar info">检查中...</div>
+      <div style="margin-top:14px;">
+        <button class="btn btn-secondary" onclick="checkHealth()">重新检查</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+const API = '';
+
+// ── Nav ──
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'settings') { loadCookies(); checkHealth(); }
+  if (name === 'download') loadJobs();
+}
+
+// ── Toast ──
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = '', 3000);
+}
+
+// ── Download ──
+async function submitDownload() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) return toast('请输入抖音链接', 'error');
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = '提交中...';
+  try {
+    const res = await fetch(API + '/api/v1/download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      toast('✅ 任务已提交', 'success');
+      document.getElementById('url-input').value = '';
+      setTimeout(loadJobs, 800);
+    } else {
+      toast('提交失败：' + (data.detail || res.status), 'error');
+    }
+  } catch (e) {
+    toast('请求失败：' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '下载';
+  }
+}
+
+document.getElementById('url-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitDownload();
+});
+
+// ── Jobs ──
+const STATUS_MAP = {
+  pending: { dot: 'dot-pending', badge: 'badge-pending', label: '排队中' },
+  running: { dot: 'dot-running', badge: 'badge-running', label: '下载中' },
+  done:    { dot: 'dot-done',    badge: 'badge-done',    label: '完成' },
+  failed:  { dot: 'dot-failed',  badge: 'badge-failed',  label: '失败' },
+};
+
+async function loadJobs() {
+  try {
+    const res = await fetch(API + '/api/v1/jobs');
+    const data = await res.json();
+    const jobs = data.jobs || [];
+    const el = document.getElementById('jobs-list');
+    if (!jobs.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">还没有下载任务</div></div>`;
+      return;
+    }
+    el.innerHTML = jobs.slice().reverse().map(job => {
+      const s = STATUS_MAP[job.status] || STATUS_MAP.pending;
+      const url = job.url || job.job_id || '-';
+      const short = url.length > 60 ? url.slice(0, 60) + '…' : url;
+      const meta = job.downloaded != null
+        ? `已下载 ${job.downloaded} 个` + (job.failed ? `，失败 ${job.failed} 个` : '')
+        : '';
+      return `
+        <div class="job-card">
+          <div class="job-status-dot ${s.dot}"></div>
+          <div class="job-info">
+            <div class="job-url" title="${url}">${short}</div>
+            <div class="job-meta">${meta || job.job_id || ''}</div>
+          </div>
+          <span class="job-badge ${s.badge}">${s.label}</span>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    console.warn('loadJobs failed', e);
+  }
+}
+
+// 有任务运行时自动刷新
+let _autoRefresh;
+function startAutoRefresh() {
+  clearInterval(_autoRefresh);
+  _autoRefresh = setInterval(async () => {
+    const res = await fetch(API + '/api/v1/jobs').catch(() => null);
+    if (!res) return;
+    const data = await res.json();
+    const hasActive = (data.jobs || []).some(j => j.status === 'pending' || j.status === 'running');
+    loadJobs();
+    if (!hasActive) clearInterval(_autoRefresh);
+  }, 3000);
+}
+
+// ── Cookie 保存/读取（通过后端 /api/v1/config 接口） ──
+async function saveCookies() {
+  const cookies = {
+    ttwid:                document.getElementById('c-ttwid').value.trim(),
+    msToken:              document.getElementById('c-msToken').value.trim(),
+    odin_tt:              document.getElementById('c-odin_tt').value.trim(),
+    passport_csrf_token:  document.getElementById('c-csrf').value.trim(),
+    sid_guard:            document.getElementById('c-sid_guard').value.trim(),
+  };
+  try {
+    const res = await fetch(API + '/api/v1/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cookies })
+    });
+    if (res.ok) {
+      document.getElementById('cookie-status').className = 'status-bar ok';
+      document.getElementById('cookie-status').textContent = '✅ Cookie 已保存';
+      toast('Cookie 保存成功', 'success');
+    } else {
+      const d = await res.json();
+      throw new Error(d.detail || res.status);
+    }
+  } catch(e) {
+    document.getElementById('cookie-status').className = 'status-bar err';
+    document.getElementById('cookie-status').textContent = '❌ 保存失败：' + e.message;
+    toast('保存失败：' + e.message, 'error');
+  }
+}
+
+async function loadCookies() {
+  try {
+    const res = await fetch(API + '/api/v1/config');
+    if (!res.ok) return;
+    const data = await res.json();
+    const c = data.cookies || {};
+    document.getElementById('c-ttwid').value = c.ttwid || '';
+    document.getElementById('c-msToken').value = c.msToken || '';
+    document.getElementById('c-odin_tt').value = c.odin_tt || '';
+    document.getElementById('c-csrf').value = c.passport_csrf_token || '';
+    document.getElementById('c-sid_guard').value = c.sid_guard || '';
+    if (c.ttwid) {
+      document.getElementById('cookie-status').className = 'status-bar ok';
+      document.getElementById('cookie-status').textContent = '✅ Cookie 已配置';
+    }
+  } catch(e) { console.warn('loadCookies failed', e); }
+}
+
+// ── Health ──
+async function checkHealth() {
+  const el = document.getElementById('health-status');
+  el.className = 'status-bar info';
+  el.textContent = '检查中...';
+  try {
+    const res = await fetch(API + '/api/v1/health');
+    if (res.ok) {
+      el.className = 'status-bar ok';
+      el.textContent = '✅ 服务运行正常';
+    } else {
+      throw new Error('HTTP ' + res.status);
+    }
+  } catch(e) {
+    el.className = 'status-bar err';
+    el.textContent = '❌ 服务异常：' + e.message;
+  }
+}
+
+// ── Init ──
+loadJobs();
+startAutoRefresh();
+</script>
+</body>
+</html>
